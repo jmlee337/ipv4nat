@@ -1,0 +1,40 @@
+<html>
+  <head>
+    <title>IPv4 NAT Test</title>
+  </head>
+  <body>
+    <h1 id="res">Processing...</h1>
+    <div>Advanced Details</div>
+    <div id="debug" style="font-family:monospace;font-size:small"></div>
+    <script>
+      const regexIpv4 = new RegExp('^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\.?\\b){4}$');
+      const candidates = new Set();
+      const allCandidates = [];
+      const candidateHandler = function(event) {
+        const candidate = event.candidate;
+        if (!candidate) {
+          const natType = candidates.size > 0 ? candidates.size === 1 ? "Normal NAT" : "Symmetric NAT" : "error";
+          const debug = allCandidates.join('\n');
+          document.getElementById("res").innerText = natType;
+          document.getElementById("debug").innerText = debug;
+          return;
+        }
+        if (candidate.candidate) {
+          allCandidates.push(candidate.candidate);
+        }
+
+        if (candidate.type === 'srflx' && regexIpv4.test(candidate.address)) {
+          const ipport = candidate.address + ":" + candidate.port;
+          candidates.add(ipport);
+        }
+      };
+      const pc = new RTCPeerConnection({iceServers: [
+        {urls: 'stun:stun1.l.google.com:19302'},
+        {urls: 'stun:stun2.l.google.com:19302'}
+      ]});
+      pc.addEventListener('icecandidate', candidateHandler);
+      pc.createDataChannel("foo");
+      pc.createOffer().then(offer => pc.setLocalDescription(offer));
+    </script>
+  </body>
+</html>
